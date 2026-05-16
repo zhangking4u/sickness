@@ -2,254 +2,959 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#ef4444">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="感冒记录">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>感冒记录</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: #f0f4f8;
-    color: #1a1a2e;
-    max-width: 480px; margin: 0 auto; padding: 20px;
-    min-height: 100dvh;
-    display: flex; flex-direction: column;
-  }
-  h1 { font-size: 24px; font-weight: 700; text-align: center; margin: 24px 0 8px; }
-  .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 24px; }
+:root {
+  --bg: #f0f4f8; --surface: #fff; --text: #1a1a2e; --text2: #64748b;--text3:#94a3b8;
+  --border: #e2e8f0; --red: #ef4444; --red-bg: #fef2f2; --amber: #f59e0b; --green: #22c55e;
+  --shadow: rgba(0,0,0,.08); --shadow-lg: rgba(0,0,0,.12);
+  --chart-bar:#ef4444; --chart-bar-active:#dc2626; --chart-text:#64748b; --chart-grid:#e2e8f0;
+  --modal-overlay: rgba(0,0,0,.4);
+}
+[data-theme=dark] {
+  --bg: #0f172a; --surface: #1e293b; --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+  --border: #334155; --red-bg: #451a1a;
+  --shadow: rgba(0,0,0,.2); --shadow-lg: rgba(0,0,0,.3);
+  --chart-bar:#f87171; --chart-bar-active:#ef4444; --chart-text:#94a3b8; --chart-grid:#334155;
+  --modal-overlay: rgba(0,0,0,.6);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg); color:var(--text);
+  max-width:480px; margin:0 auto; padding:12px 16px 24px;
+  min-height:100dvh; transition:background .2s,color .2s;
+}
+h1 { font-size:22px; font-weight:700; }
+.subtitle { color:var(--text2); font-size:13px; }
 
-  /* Action buttons */
-  .actions { display: flex; gap: 12px; margin-bottom: 24px; }
-  .btn {
-    flex: 1; border: none; border-radius: 12px; padding: 16px;
-    font-size: 16px; font-weight: 600; cursor: pointer;
-    transition: transform .15s, box-shadow .15s;
-    touch-action: manipulation;
-  }
-  .btn:active { transform: scale(.96); }
-  .btn-record {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: #fff; box-shadow: 0 4px 12px rgba(239,68,68,.35);
-  }
-  .btn-record:active { box-shadow: 0 2px 6px rgba(239,68,68,.35); }
-  .btn-clear {
-    background: #e2e8f0; color: #475569;
-  }
-  .btn-clear:active { background: #cbd5e1; }
-  .btn-export {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,.35);
-  }
+/* Header */
+.header { display:flex; align-items:center; justify-content:space-between; margin:12px 0 4px; }
+.header-left { display:flex; align-items:center; gap:8px; }
+#theme-toggle {
+  background:none; border:none; font-size:20px; cursor:pointer;
+  padding:6px; border-radius:8px; line-height:1; color:var(--text2);
+}
+#theme-toggle:hover { background:var(--border); }
 
-  /* Stats cards */
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-  .stat-card {
-    background: #fff; border-radius: 12px; padding: 16px; text-align: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
-  }
-  .stat-card .num { font-size: 32px; font-weight: 700; color: #ef4444; }
-  .stat-card .label { font-size: 13px; color: #64748b; margin-top: 4px; }
+/* Person bar */
+.person-bar { display:flex; gap:6px; margin:12px 0; flex-wrap:wrap; align-items:center; }
+.person-tab {
+  padding:6px 14px; border-radius:20px; border:1.5px solid var(--border);
+  background:var(--surface); color:var(--text2); font-size:13px; font-weight:500;
+  cursor:pointer; transition:all .15s; touch-action:manipulation;
+  position:relative; user-select:none;
+}
+.person-tab.active { border-color:var(--red); background:var(--red-bg); color:var(--red); font-weight:600; }
+.person-tab .del-person {
+  display:none; position:absolute; top:-6px; right:-6px; width:18px; height:18px;
+  border-radius:50%; background:var(--text3); color:#fff; border:none;
+  font-size:11px; line-height:18px; text-align:center; cursor:pointer; padding:0;
+}
+.person-tab:hover .del-person,
+.person-tab .del-person:active { display:block; }
+#btn-add-person {
+  padding:6px 12px; border-radius:20px; border:1.5px dashed var(--border);
+  background:none; color:var(--text2); font-size:13px; cursor:pointer; touch-action:manipulation;
+}
 
-  /* Year stats */
-  .year-section { margin-bottom: 20px; }
-  .year-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #334155; }
-  .year-bar {
-    background: #e2e8f0; border-radius: 8px; height: 24px; overflow: hidden;
-    position: relative;
-  }
-  .year-fill {
-    height: 100%; border-radius: 8px;
-    background: linear-gradient(90deg, #fca5a5, #ef4444);
-    transition: width .3s;
-    display: flex; align-items: center; padding-left: 8px;
-    font-size: 12px; font-weight: 600; color: #fff; min-width: fit-content;
-  }
-  .year-fill span { padding-left: 4px; }
+/* Actions */
+.actions { display:flex; gap:8px; margin-bottom:16px; }
+.btn {
+  border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:600;
+  cursor:pointer; transition:transform .12s,box-shadow .12s; touch-action:manipulation;
+  text-align:center;
+}
+.btn:active { transform:scale(.96); }
+.btn-record {
+  flex:2; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; box-shadow:0 4px 12px rgba(239,68,68,.35);
+}
+.btn-secondary {
+  flex:1; background:var(--border); color:var(--text2); font-size:13px; padding:10px;
+  min-width:0;
+}
 
-  /* Record list */
-  .section-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #334155; }
-  .record-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-  .record-item {
-    background: #fff; border-radius: 10px; padding: 12px 16px;
-    display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
-    animation: fadeIn .3s ease;
-  }
-  .record-item .date { font-size: 15px; font-weight: 500; }
-  .record-item .weekday { font-size: 13px; color: #64748b; margin-left: 8px; }
-  .record-item .del {
-    background: none; border: none; color: #94a3b8; font-size: 18px;
-    cursor: pointer; padding: 4px; line-height: 1; border-radius: 6px;
-    transition: color .15s, background .15s;
-  }
-  .record-item .del:hover { color: #ef4444; background: #fef2f2; }
+/* Stats */
+.stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+.stat-card {
+  background:var(--surface); border-radius:10px; padding:10px 6px; text-align:center;
+  box-shadow:0 1px 3px var(--shadow);
+}
+.stat-card .num { font-size:24px; font-weight:700; color:var(--red); line-height:1.2; }
+.stat-card .label { font-size:11px; color:var(--text2); margin-top:2px; }
 
-  .empty { text-align: center; color: #94a3b8; padding: 32px 0; font-size: 15px; }
-  .toast {
-    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-    background: #1e293b; color: #fff; padding: 10px 24px; border-radius: 8px;
-    font-size: 14px; font-weight: 500; z-index: 999;
-    animation: fadeInDown .3s ease;
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes fadeInDown { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* Section title */
+.section-title {
+  font-size:14px; font-weight:600; margin:16px 0 8px; color:var(--text);
+  display:flex; align-items:center; gap:6px;
+}
+
+/* Year bars */
+.year-section { margin-bottom:12px; }
+.year-title { font-size:13px; font-weight:500; margin-bottom:4px; color:var(--text2); display:flex; justify-content:space-between; }
+.year-bar { background:var(--border); border-radius:6px; height:20px; overflow:hidden; position:relative; }
+.year-fill {
+  height:100%; border-radius:6px;
+  background:linear-gradient(90deg,#fca5a5,var(--red));
+  transition:width .3s; display:flex; align-items:center; padding-left:6px;
+  font-size:11px; font-weight:600; color:#fff; min-width:fit-content; white-space:nowrap;
+}
+
+/* Chart container */
+.chart-container { background:var(--surface); border-radius:12px; padding:12px; box-shadow:0 1px 3px var(--shadow); }
+.chart-container select {
+  float:right; border:1px solid var(--border); border-radius:6px; padding:4px 8px;
+  font-size:13px; background:var(--surface); color:var(--text); margin-bottom:8px;
+}
+#monthly-chart { width:100%; height:180px; display:block; }
+
+/* Symptom stats */
+.symptom-grid { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.symptom-tag {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 10px; border-radius:6px; font-size:12px;
+  background:var(--border); color:var(--text2);
+}
+.symptom-tag .count { font-weight:600; color:var(--red); }
+
+/* Interval analysis */
+.interval-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.interval-card {
+  background:var(--surface); border-radius:10px; padding:10px 6px; text-align:center;
+  box-shadow:0 1px 3px var(--shadow);
+}
+.interval-card .num { font-size:22px; font-weight:700; color:var(--text); line-height:1.2; }
+.interval-card .label { font-size:11px; color:var(--text2); margin-top:2px; }
+.interval-trend { text-align:center; margin-top:8px; font-size:13px; color:var(--text2); }
+
+/* Record list */
+.record-list { list-style:none; display:flex; flex-direction:column; gap:6px; }
+.record-item {
+  background:var(--surface); border-radius:10px; padding:10px 12px;
+  box-shadow:0 1px 3px var(--shadow);
+  animation:fadeIn .25s ease; cursor:pointer; transition:background .15s;
+}
+.record-item:active { background:var(--border); }
+.record-top { display:flex; justify-content:space-between; align-items:center; }
+.record-date { font-size:14px; font-weight:500; }
+.record-weekday { font-size:12px; color:var(--text2); margin-left:6px; }
+.record-badges { display:flex; gap:4px; align-items:center; }
+.severity-badge {
+  font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px;
+}
+.severity-轻 { background:#dcfce7; color:#16a34a; }
+.severity-中 { background:#fef3c7; color:#d97706; }
+.severity-重 { background:#fee2e2; color:#dc2626; }
+[data-theme=dark] .severity-轻 { background:#14532d; color:#4ade80; }
+[data-theme=dark] .severity-中 { background:#713f12; color:#fbbf24; }
+[data-theme=dark] .severity-重 { background:#7f1d1d; color:#f87171; }
+.record-symptoms { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
+.record-symptom {
+  font-size:11px; padding:1px 6px; border-radius:4px;
+  background:var(--border); color:var(--text2);
+}
+.record-meta { font-size:11px; color:var(--text3); margin-top:4px; display:flex; gap:12px; }
+.record-del {
+  background:none; border:none; color:var(--text3); font-size:16px;
+  cursor:pointer; padding:2px 4px; line-height:1; border-radius:4px;
+  transition:color .15s,background .15s;
+}
+.record-del:hover { color:var(--red); background:var(--red-bg); }
+
+.empty {
+  text-align:center; color:var(--text3); padding:40px 0; font-size:14px;
+}
+.toast {
+  position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:9999;
+  background:#1e293b; color:#fff; padding:10px 24px; border-radius:8px;
+  font-size:14px; font-weight:500; box-shadow:0 4px 12px rgba(0,0,0,.2);
+  animation:fadeInDown .25s ease;
+}
+
+/* Modal */
+.modal-overlay {
+  position:fixed; inset:0; background:var(--modal-overlay);
+  display:flex; align-items:flex-end; justify-content:center; z-index:1000;
+  animation:fadeIn .2s ease;
+}
+.modal-overlay.hidden { display:none; }
+.modal {
+  background:var(--surface); border-radius:16px 16px 0 0; width:100%;
+  max-width:480px; max-height:85vh; overflow-y:auto; padding:20px;
+  animation:slideUp .25s ease;
+}
+.modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.modal-header h2 { font-size:18px; font-weight:600; }
+.modal-close { background:none; border:none; font-size:20px; color:var(--text3); cursor:pointer; padding:4px; }
+.form-group { margin-bottom:14px; }
+.form-group label { display:block; font-size:13px; font-weight:500; color:var(--text2); margin-bottom:4px; }
+.form-group input[type=date],
+.form-group textarea {
+  width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px;
+  font-size:14px; background:var(--bg); color:var(--text); font-family:inherit; resize:vertical;
+}
+.form-group textarea { min-height:60px; }
+.form-group input[type=date]:focus,
+.form-group textarea:focus { outline:none; border-color:var(--red); }
+
+/* Severity pills */
+.severity-group { display:flex; gap:8px; }
+.severity-option {
+  flex:1; padding:10px; border-radius:8px; border:1.5px solid var(--border);
+  text-align:center; font-size:14px; font-weight:500; cursor:pointer;
+  transition:all .15s; touch-action:manipulation; background:var(--bg); color:var(--text2);
+}
+.severity-option input { display:none; }
+.severity-option:has(input:checked) { border-color:currentColor; }
+.severity-option[data-value=轻] { color:var(--green); }
+.severity-option[data-value=中] { color:var(--amber); }
+.severity-option[data-value=重] { color:var(--red); }
+.severity-option:has(input:checked) { background:color-mix(in srgb, currentColor 10%, transparent); font-weight:600; }
+
+/* Symptom toggles */
+.symptom-group { display:flex; flex-wrap:wrap; gap:6px; }
+.symptom-toggle {
+  padding:6px 12px; border-radius:8px; border:1.5px solid var(--border);
+  font-size:13px; cursor:pointer; transition:all .15s;
+  touch-action:manipulation; background:var(--bg); color:var(--text2); user-select:none;
+}
+.symptom-toggle.active { border-color:var(--red); background:var(--red-bg); color:var(--red); font-weight:500; }
+
+.modal-footer { display:flex; gap:8px; margin-top:16px; }
+.modal-footer .btn { flex:1; padding:12px; border-radius:10px; }
+.btn-save { background:var(--red); color:#fff; }
+.btn-cancel { background:var(--border); color:var(--text2); }
+
+/* Hidden file input */
+#file-input { display:none; }
+
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes fadeInDown { from{opacity:0;transform:translate(-50%,-8px)} to{opacity:1;transform:translate(-50%,0)} }
+@keyframes slideUp { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+@media (prefers-reduced-motion:reduce) {
+  * { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
 </style>
 </head>
 <body>
 
-<h1>😷 感冒记录</h1>
-<p class="subtitle">点一下按钮就记一次，看看频率变化</p>
+<div class="header">
+  <div class="header-left"><h1>😷 感冒记录</h1></div>
+  <button id="theme-toggle" aria-label="切换主题">🌙</button>
+</div>
+<p class="subtitle">详细记录每次感冒，了解健康趋势</p>
+
+<div class="person-bar" id="person-bar"></div>
 
 <div class="actions">
   <button class="btn btn-record" id="btn-record">🤧 记一次感冒</button>
-  <button class="btn btn-clear" id="btn-clear">清空</button>
+  <button class="btn btn-secondary" id="btn-export">📤</button>
+  <button class="btn btn-secondary" id="btn-import">📥</button>
+  <button class="btn btn-secondary" id="btn-clear">🗑️</button>
 </div>
 
 <div class="stats">
-  <div class="stat-card" id="stat-total"><div class="num">0</div><div class="label">总次数</div></div>
-  <div class="stat-card" id="stat-this-year"><div class="num">0</div><div class="label">今年</div></div>
-  <div class="stat-card" id="stat-last-year"><div class="num">0</div><div class="label">去年</div></div>
+  <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">总次数</div></div>
+  <div class="stat-card"><div class="num" id="stat-year">0</div><div class="label" id="stat-year-label">今年</div></div>
+  <div class="stat-card"><div class="num" id="stat-avg-dur">-</div><div class="label">平均天数</div></div>
+  <div class="stat-card"><div class="num" id="stat-avg-int">-</div><div class="label">平均间隔</div></div>
 </div>
 
+<div class="section-title">📊 年度统计</div>
 <div id="year-stats"></div>
 
-<div class="section-title">历史记录</div>
+<div class="section-title">📈 月度趋势</div>
+<div class="chart-container">
+  <select id="chart-year"></select>
+  <canvas id="monthly-chart"></canvas>
+</div>
+
+<div class="section-title">🏥 症状统计</div>
+<div id="symptom-stats"></div>
+
+<div class="section-title">⏱️ 间隔分析</div>
+<div id="interval-analysis"></div>
+
+<div class="section-title">📋 记录</div>
 <ul class="record-list" id="record-list"></ul>
 <div class="empty" id="empty-msg">还没有记录，加油保持健康 💪</div>
 
-<div class="actions" style="margin-top:auto;padding-top:16px">
-  <button class="btn btn-export" id="btn-export">📋 导出数据</button>
+<!-- Modal -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">记录感冒</h2>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>成员</label>
+        <select id="modal-person" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text);"></select>
+      </div>
+      <div class="form-group">
+        <label>开始日期</label>
+        <input type="date" id="modal-start">
+      </div>
+      <div class="form-group">
+        <label>结束日期 <span style="color:var(--text3);font-weight:400;">（可选，不填视为1天）</span></label>
+        <input type="date" id="modal-end">
+      </div>
+      <div class="form-group">
+        <label>严重程度</label>
+        <div class="severity-group" id="modal-severity">
+          <label class="severity-option" data-value="轻"><input type="radio" name="severity" value="轻"> 😌 轻</label>
+          <label class="severity-option" data-value="中"><input type="radio" name="severity" value="中"> 😣 中</label>
+          <label class="severity-option" data-value="重"><input type="radio" name="severity" value="重"> 😰 重</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>症状 <span style="color:var(--text3);font-weight:400;">（多选）</span></label>
+        <div class="symptom-group" id="modal-symptoms"></div>
+      </div>
+      <div class="form-group">
+        <label>备注</label>
+        <textarea id="modal-note" placeholder="比如：可能被同事传染了、着凉了…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" id="modal-cancel">取消</button>
+      <button class="btn btn-save" id="modal-save">保存</button>
+    </div>
+  </div>
 </div>
 
+<input type="file" id="file-input" accept=".json">
+
 <script>
-const STORAGE_KEY = 'sickness-records';
+// ========== Data Layer ==========
+const STORAGE_KEY = 'sickness-v2';
+const PERSONS_KEY = 'sickness-persons';
+const CUR_PERSON_KEY = 'sickness-cur';
+const THEME_KEY = 'sickness-theme';
+const SYMPTOMS = ['发烧','咳嗽','流鼻涕','鼻塞','喉咙痛','头痛','肌肉酸痛','乏力','打喷嚏','畏寒'];
+
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 function getRecords() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
   catch { return []; }
 }
+function saveRecords(r) { localStorage.setItem(STORAGE_KEY, JSON.stringify(r)); }
 
-function saveRecords(records) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+function getPersons() {
+  try { return JSON.parse(localStorage.getItem(PERSONS_KEY) || '["我"]'); }
+  catch { return ['我']; }
+}
+function savePersons(p) { localStorage.setItem(PERSONS_KEY, JSON.stringify(p)); }
+
+function getCurPerson() { return localStorage.getItem(CUR_PERSON_KEY) || '我'; }
+function setCurPerson(p) { localStorage.setItem(CUR_PERSON_KEY, p); }
+
+function migrate() {
+  const old = localStorage.getItem('sickness-records');
+  if (!old) return;
+  try {
+    const data = JSON.parse(old);
+    if (Array.isArray(data) && data.length && typeof data[0]==='string') {
+      const mapped = data.map(d => ({
+        id: uid(), person: '我', startDate: d, endDate: null,
+        severity: '轻', symptoms: [], note: '', createdAt: d+'T00:00:00'
+      }));
+      saveRecords(mapped);
+      savePersons(['我']);
+      localStorage.removeItem('sickness-records');
+    }
+  } catch(e) {}
+}
+migrate();
+
+function filtered() {
+  const cur = getCurPerson();
+  return getRecords().filter(r => r.person === cur);
 }
 
-function todayStr() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+// ========== Theme ==========
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const prefers = window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  const theme = saved || prefers;
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('theme-toggle').textContent = theme === 'dark' ? '☀️' : '🌙';
 }
+initTheme();
 
-function weekday(dateStr) {
-  const days = ['日','一','二','三','四','五','六'];
-  return '周' + days[new Date(dateStr).getDay()];
-}
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem(THEME_KEY, next);
+  document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀️' : '🌙';
+  render();
+});
 
-function showToast(msg) {
+// ========== Toast ==========
+function toast(msg) {
   const old = document.querySelector('.toast');
   if (old) old.remove();
   const el = document.createElement('div');
-  el.className = 'toast';
-  el.textContent = msg;
+  el.className = 'toast'; el.textContent = msg;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2000);
 }
 
-function recordSickness() {
-  const today = todayStr();
-  const records = getRecords();
-  if (records.includes(today)) {
-    showToast('今天已经记过了 🫡');
-    return;
+// ========== Modal ==========
+let editId = null;
+
+const SYMPTOM_LABELS = { '发烧':'🤒','咳嗽':'😮‍💨','流鼻涕':'🤧','鼻塞':'😤','喉咙痛':'🥴','头痛':'🤕','肌肉酸痛':'💪','乏力':'😩','打喷嚏':'😪','畏寒':'🥶' };
+
+function initModalSymptoms() {
+  const el = document.getElementById('modal-symptoms');
+  el.innerHTML = SYMPTOMS.map(s =>
+    `<div class="symptom-toggle" data-symptom="${s}">${SYMPTOM_LABELS[s]||''} ${s}</div>`
+  ).join('');
+  el.querySelectorAll('.symptom-toggle').forEach(btn => {
+    btn.addEventListener('click', () => btn.classList.toggle('active'));
+  });
+  // Severity click
+  document.querySelectorAll('.severity-option').forEach(el => {
+    el.addEventListener('click', () => {
+      el.querySelector('input').checked = true;
+    });
+  });
+}
+initModalSymptoms();
+
+function openModal(record) {
+  const modal = document.getElementById('modal');
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Populate person select
+  const personSel = document.getElementById('modal-person');
+  const persons = getPersons();
+  personSel.innerHTML = persons.map(p =>
+    `<option value="${p}">${p}</option>`
+  ).join('');
+
+  if (record) {
+    editId = record.id;
+    document.getElementById('modal-title').textContent = '编辑记录';
+    personSel.value = record.person;
+    document.getElementById('modal-start').value = record.startDate;
+    document.getElementById('modal-end').value = record.endDate || '';
+    document.querySelector(`.severity-option input[value="${record.severity}"]`).checked = true;
+    document.getElementById('modal-note').value = record.note || '';
+    // Symptoms
+    document.querySelectorAll('.symptom-toggle').forEach(el => {
+      el.classList.toggle('active', record.symptoms.includes(el.dataset.symptom));
+    });
+  } else {
+    editId = null;
+    document.getElementById('modal-title').textContent = '记录感冒';
+    personSel.value = getCurPerson();
+    document.getElementById('modal-start').value = todayStr();
+    document.getElementById('modal-end').value = '';
+    document.querySelector('.severity-option input[value="轻"]').checked = true;
+    document.getElementById('modal-note').value = '';
+    document.querySelectorAll('.symptom-toggle').forEach(el => el.classList.remove('active'));
   }
-  records.push(today);
-  saveRecords(records);
-  render();
-  showToast('已记录 🤧 多喝热水');
 }
 
-function clearAll() {
-  if (!confirm('确定清空所有感冒记录吗？')) return;
-  saveRecords([]);
-  render();
-  showToast('已清空');
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  document.body.style.overflow = '';
+  editId = null;
 }
 
-function deleteRecord(date) {
+// Modal events
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+document.getElementById('modal-save').addEventListener('click', () => {
+  const person = document.getElementById('modal-person').value;
+  const startDate = document.getElementById('modal-start').value;
+  const endDate = document.getElementById('modal-end').value || null;
+  const severity = document.querySelector('input[name="severity"]:checked')?.value || '轻';
+  const note = document.getElementById('modal-note').value.trim();
+  const symptoms = [...document.querySelectorAll('.symptom-toggle.active')].map(el => el.dataset.symptom);
+
+  if (!startDate) { toast('请选择开始日期'); return; }
+  if (endDate && endDate < startDate) { toast('结束日期不能早于开始日期'); return; }
+
   let records = getRecords();
-  records = records.filter(r => r !== date);
+  if (editId) {
+    const idx = records.findIndex(r => r.id === editId);
+    if (idx !== -1) {
+      records[idx] = { ...records[idx], person, startDate, endDate, severity, symptoms, note };
+    }
+  } else {
+    // Check duplicate within same person
+    const dup = records.some(r => r.person === person && r.startDate === startDate);
+    if (dup) { toast('该成员这天已有记录'); return; }
+    records.push({ id: uid(), person, startDate, endDate, severity, symptoms, note, createdAt: new Date().toISOString() });
+  }
+  saveRecords(records);
+  closeModal();
+  render();
+  toast(editId ? '已更新' : '已记录 🤧 多喝热水');
+});
+
+// ========== Actions ==========
+document.getElementById('btn-record').addEventListener('click', () => openModal(null));
+document.getElementById('btn-clear').addEventListener('click', () => {
+  const cur = getCurPerson();
+  if (!confirm(`确定清空「${cur}」的所有感冒记录吗？`)) return;
+  const records = getRecords().filter(r => r.person !== cur);
+  saveRecords(records);
+  render();
+  toast('已清空');
+});
+
+document.getElementById('btn-export').addEventListener('click', () => {
+  const data = getRecords();
+  if (!data.length) { toast('没有数据可导出'); return; }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `感冒记录_${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已导出');
+});
+
+document.getElementById('btn-import').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error('格式错误');
+      // Validate
+      if (data.length && !data[0].startDate) throw new Error('格式错误');
+      const existing = getRecords();
+      const merged = [...existing];
+      let added = 0;
+      for (const r of data) {
+        const dup = existing.some(x => x.person === r.person && x.startDate === r.startDate);
+        if (!dup) { merged.push({ ...r, id: uid() }); added++; }
+      }
+      saveRecords(merged);
+      // Merge persons
+      const persons = getPersons();
+      const newPersons = [...new Set([...persons, ...data.map(r => r.person)])];
+      savePersons(newPersons);
+      render();
+      toast(`导入完成，新增 ${added} 条记录`);
+    } catch(err) {
+      toast('导入失败：文件格式不正确');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function deleteRecord(id) {
+  if (!confirm('确定删除这条记录？')) return;
+  let records = getRecords();
+  records = records.filter(r => r.id !== id);
   saveRecords(records);
   render();
 }
 
+// ========== Person ==========
+function renderPersons() {
+  const bar = document.getElementById('person-bar');
+  const persons = getPersons();
+  const cur = getCurPerson();
+  bar.innerHTML = persons.map(p =>
+    `<div class="person-tab${p===cur?' active':''}" data-person="${p}">
+      ${p}
+      ${persons.length > 1 && p !== cur ? `<button class="del-person" data-person="${p}">✕</button>` : ''}
+    </div>`
+  ).join('') + '<button id="btn-add-person">+ 添加成员</button>';
+
+  bar.querySelectorAll('.person-tab').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('del-person')) return;
+      const p = el.dataset.person;
+      if (p !== getCurPerson()) {
+        setCurPerson(p);
+        render();
+      }
+    });
+  });
+  bar.querySelectorAll('.del-person').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const p = el.dataset.person;
+      const records = getRecords().filter(r => r.person === p);
+      const msg = records.length ? `确定删除「${p}」及其 ${records.length} 条记录吗？` : `确定删除「${p}」吗？`;
+      if (!confirm(msg)) return;
+      const persons = getPersons().filter(x => x !== p);
+      savePersons(persons);
+      const remaining = getRecords().filter(r => r.person !== p);
+      saveRecords(remaining);
+      if (getCurPerson() === p) setCurPerson(persons[0]);
+      render();
+      toast(`已删除「${p}」`);
+    });
+  });
+  document.getElementById('btn-add-person').addEventListener('click', () => {
+    const name = prompt('输入新成员名称：');
+    if (!name || !name.trim()) return;
+    const n = name.trim();
+    const persons = getPersons();
+    if (persons.includes(n)) { toast('该成员已存在'); return; }
+    persons.push(n);
+    savePersons(persons);
+    render();
+    toast(`已添加「${n}」`);
+  });
+}
+
+// ========== Helpers ==========
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function weekday(s) { return '周' + ['日','一','二','三','四','五','六'][new Date(s).getDay()]; }
+
+function durationDays(r) {
+  if (!r.endDate) return 1;
+  const s = new Date(r.startDate), e = new Date(r.endDate);
+  return Math.max(1, Math.round((e - s) / 86400000) + 1);
+}
+
+// ========== Render ==========
 function render() {
-  const records = getRecords();
-  records.sort((a, b) => b.localeCompare(a)); // newest first
+  renderPersons();
+  const records = filtered();
+
+  // Sort
+  records.sort((a,b) => b.startDate.localeCompare(a.startDate));
 
   // Stats
   const total = records.length;
-  const thisYear = new Date().getFullYear();
-  const thisYearCount = records.filter(r => r.startsWith(String(thisYear))).length;
-  const lastYearCount = records.filter(r => r.startsWith(String(thisYear - 1))).length;
+  const yr = new Date().getFullYear();
+  const yrCnt = records.filter(r => r.startDate.startsWith(String(yr))).length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-year').textContent = yrCnt;
+  document.getElementById('stat-year-label').textContent = yr + '年';
 
-  document.getElementById('stat-total').querySelector('.num').textContent = total;
-  document.getElementById('stat-this-year').querySelector('.num').textContent = thisYearCount;
-  document.getElementById('stat-last-year').querySelector('.num').textContent = lastYearCount;
+  // Avg duration
+  if (total > 0) {
+    const avgDur = records.reduce((s,r) => s + durationDays(r), 0) / total;
+    document.getElementById('stat-avg-dur').textContent = avgDur.toFixed(1);
+  } else {
+    document.getElementById('stat-avg-dur').textContent = '-';
+  }
 
-  // Year stats bar
-  const yearStatsEl = document.getElementById('year-stats');
+  // Avg interval
+  const sorted = [...records].sort((a,b) => a.startDate.localeCompare(b.startDate));
+  if (sorted.length >= 2) {
+    let gaps = [];
+    for (let i = 1; i < sorted.length; i++) {
+      const prevEnd = sorted[i-1].endDate || sorted[i-1].startDate;
+      const curStart = sorted[i].startDate;
+      const gap = Math.round((new Date(curStart) - new Date(prevEnd)) / 86400000);
+      if (gap > 0) gaps.push(gap);
+    }
+    if (gaps.length > 0) {
+      const avgGap = gaps.reduce((a,b)=>a+b,0) / gaps.length;
+      document.getElementById('stat-avg-int').textContent = avgGap.toFixed(0);
+    } else {
+      document.getElementById('stat-avg-int').textContent = '-';
+    }
+  } else {
+    document.getElementById('stat-avg-int').textContent = '-';
+  }
+
+  renderYearBars(records);
+  renderChart(records);
+  renderSymptomStats(records);
+  renderIntervalAnalysis(sorted);
+  renderRecordList(records);
+}
+
+// ========== Year Bars ==========
+function renderYearBars(records) {
+  const el = document.getElementById('year-stats');
   const byYear = {};
   for (const r of records) {
-    const y = r.slice(0, 4);
-    byYear[y] = (byYear[y] || 0) + 1;
+    const y = r.startDate.slice(0,4);
+    byYear[y] = (byYear[y]||0) + 1;
   }
   const years = Object.keys(byYear).sort().reverse();
-  const maxCount = Math.max(...Object.values(byYear), 1);
-  let yearHtml = '';
-  for (const y of years) {
-    const pct = (byYear[y] / maxCount * 100).toFixed(0);
-    yearHtml += `<div class="year-section">
-      <div class="year-title">${y} 年 · ${byYear[y]} 次</div>
-      <div class="year-bar"><div class="year-fill" style="width:${pct}%"><span>${byYear[y]}次</span></div></div>
-    </div>`;
-  }
-  yearStatsEl.innerHTML = yearHtml;
+  if (!years.length) { el.innerHTML = ''; return; }
+  const max = Math.max(...Object.values(byYear), 1);
+  el.innerHTML = years.map(y =>
+    `<div class="year-section">
+      <div class="year-title"><span>${y} 年</span><span>${byYear[y]} 次</span></div>
+      <div class="year-bar"><div class="year-fill" style="width:${(byYear[y]/max*100).toFixed(0)}%"><span>${byYear[y]}次</span></div></div>
+    </div>`
+  ).join('');
+}
 
-  // Record list
+// ========== Monthly Chart ==========
+function renderChart(records) {
+  const sel = document.getElementById('chart-year');
+  const years = [...new Set(records.map(r => r.startDate.slice(0,4)))].sort().reverse();
+  const curYr = new Date().getFullYear();
+  if (!years.length) years.push(String(curYr));
+  const selected = sel.value || String(curYr);
+  const validYear = years.includes(selected) ? selected : years[0];
+  if (sel.options.length === 0 || years.some(y => ![...sel.options].some(o => o.value===y))) {
+    sel.innerHTML = years.map(y => `<option value="${y}"${y===validYear?' selected':''}>${y}年</option>`).join('');
+  }
+  sel.onchange = () => drawChart(parseInt(sel.value), records);
+
+  drawChart(parseInt(validYear), records);
+}
+
+function drawChart(year, records) {
+  const canvas = document.getElementById('monthly-chart');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = Math.min(rect.width - 24, 456);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = 180 * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = '180px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const months = Array(12).fill(0);
+  records.forEach(r => {
+    const d = new Date(r.startDate);
+    if (d.getFullYear() === year) months[d.getMonth()]++;
+  });
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const barColor = isDark ? '#f87171' : '#ef4444';
+  const barActive = isDark ? '#ef4444' : '#dc2626';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? '#334155' : '#e2e8f0';
+  const barBg = isDark ? '#7f1d1d' : '#fecaca';
+
+  const PAD = { t: 16, r: 8, b: 24, l: 8 };
+  const chartW = W - PAD.l - PAD.r;
+  const chartH = 180 - PAD.t - PAD.b;
+  const maxVal = Math.max(...months, 1);
+  const barW = Math.min(chartW / 12 - 4, 30);
+  const gap = (chartW - barW * 12) / 13;
+
+  ctx.clearRect(0,0,W,180);
+  const now = new Date();
+
+  // Grid lines
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = PAD.t + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W - PAD.r, y); ctx.stroke();
+  }
+
+  months.forEach((cnt, i) => {
+    const x = PAD.l + gap + i * (barW + gap);
+    const h = cnt > 0 ? Math.max(4, (cnt / maxVal) * chartH) : 0;
+    const y = PAD.t + chartH - h;
+    const active = i === now.getMonth() && year === now.getFullYear();
+
+    // Bar bg (empty bar)
+    ctx.fillStyle = barBg;
+    (function() {
+      const eh = Math.max(4, (1 / maxVal) * chartH);
+      const ey = PAD.t + chartH - eh;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, ey, barW, eh, [3,3,0,0]);
+      else ctx.rect(x, ey, barW, eh);
+      ctx.fill();
+    })();
+
+    if (cnt > 0) {
+      // Gradient
+      const grad = ctx.createLinearGradient(x, y, x, PAD.t + chartH);
+      grad.addColorStop(0, active ? barActive : barColor);
+      grad.addColorStop(1, barColor);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, barW, h, [3,3,0,0]);
+      else ctx.rect(x, y, barW, h);
+      ctx.fill();
+    }
+
+    // Value
+    if (cnt > 0) {
+      ctx.fillStyle = textColor;
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(cnt, x + barW/2, y - 4);
+    }
+
+    // Month label
+    ctx.fillStyle = textColor;
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(i + 1 + '月', x + barW/2, 180 - 4);
+  });
+}
+
+// ========== Symptom Stats ==========
+function renderSymptomStats(records) {
+  const el = document.getElementById('symptom-stats');
+  const counts = {};
+  for (const r of records) {
+    for (const s of r.symptoms) { counts[s] = (counts[s]||0) + 1; }
+  }
+  const entries = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  if (!entries.length) { el.innerHTML = '<div class="symptom-grid"><span style="color:var(--text3);font-size:13px;">暂无症状数据</span></div>'; return; }
+  const max = entries[0][1];
+  el.innerHTML = `<div class="symptom-grid">${
+    entries.map(([s,c]) =>
+      `<div class="symptom-tag">
+        ${SYMPTOM_LABELS[s]||''} ${s}
+        <span class="count">${c}</span>
+        <span style="color:var(--text3);font-size:10px;">${c > 0 ? Math.round(c/records.length*100) + '%' : ''}</span>
+      </div>`
+    ).join('')
+  }</div>`;
+}
+
+// ========== Interval Analysis ==========
+function renderIntervalAnalysis(sorted) {
+  const el = document.getElementById('interval-analysis');
+  if (sorted.length < 2) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;">至少需要 2 次记录才能分析间隔</div>';
+    return;
+  }
+  let gaps = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prevEnd = sorted[i-1].endDate || sorted[i-1].startDate;
+    const curStart = sorted[i].startDate;
+    const gap = Math.round((new Date(curStart) - new Date(prevEnd)) / 86400000);
+    if (gap > 0) gaps.push(gap);
+  }
+  if (!gaps.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;">记录日期重叠，无法计算间隔</div>';
+    return;
+  }
+  const avg = Math.round(gaps.reduce((a,b)=>a+b,0) / gaps.length);
+  const min = Math.min(...gaps);
+  const max = Math.max(...gaps);
+
+  // Trend: compare first half vs second half
+  const half = Math.floor(gaps.length / 2);
+  const firstHalf = gaps.slice(0, half);
+  const secondHalf = gaps.slice(half);
+  const avgFirst = firstHalf.reduce((a,b)=>a+b,0) / firstHalf.length;
+  const avgSecond = secondHalf.reduce((a,b)=>a+b,0) / secondHalf.length;
+  let trend = '—';
+  if (gaps.length >= 3 && avgSecond > avgFirst * 1.1) trend = '📈 间隔变长 ↓ 频率降低 👍';
+  else if (gaps.length >= 3 && avgSecond < avgFirst * 0.9) trend = '📉 间隔变短 ↑ 频率增加 ⚠️';
+
+  el.innerHTML = `
+    <div class="interval-grid">
+      <div class="interval-card"><div class="num">${avg}</div><div class="label">平均间隔(天)</div></div>
+      <div class="interval-card"><div class="num">${min}</div><div class="label">最短间隔(天)</div></div>
+      <div class="interval-card"><div class="num">${max}</div><div class="label">最长间隔(天)</div></div>
+    </div>
+    <div class="interval-trend">趋势：${trend}</div>
+    <div style="margin-top:6px;display:flex;gap:2px;height:20px;align-items:flex-end;">
+      ${gaps.slice(-20).map(g => {
+        const h = Math.max(4, g / max * 20);
+        return `<div style="flex:1;height:${h}px;background:var(--red);border-radius:2px 2px 0 0;" title="${g}天"></div>`;
+      }).join('')}
+      ${gaps.length > 20 ? `<span style="font-size:10px;color:var(--text3);margin-left:4px;">近20次</span>` : ''}
+    </div>
+  `;
+}
+
+// ========== Record List ==========
+function renderRecordList(records) {
   const listEl = document.getElementById('record-list');
   const emptyEl = document.getElementById('empty-msg');
-  if (total === 0) {
+  if (!records.length) {
     listEl.innerHTML = '';
     emptyEl.style.display = 'block';
     return;
   }
   emptyEl.style.display = 'none';
-  listEl.innerHTML = records.map(r => `
-    <li class="record-item">
-      <span><span class="date">${r}</span><span class="weekday">${weekday(r)}</span></span>
-      <button class="del" onclick="deleteRecord('${r}')">✕</button>
-    </li>
-  `).join('');
+  listEl.innerHTML = records.map(r => {
+    const dur = durationDays(r);
+    const hasNote = r.note ? '📝' : '';
+    const symptomsHtml = r.symptoms.length
+      ? `<div class="record-symptoms">${r.symptoms.map(s =>
+          `<span class="record-symptom">${SYMPTOM_LABELS[s]||''} ${s}</span>`
+        ).join('')}</div>`
+      : '';
+    return `<li class="record-item" data-id="${r.id}">
+      <div class="record-top">
+        <div>
+          <span class="record-date">${r.startDate}</span>
+          <span class="record-weekday">${weekday(r.startDate)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="severity-badge severity-${r.severity}">${r.severity}</span>
+          ${r.person !== getCurPerson() ? `<span style="font-size:11px;color:var(--text3)">${r.person}</span>` : ''}
+          <button class="record-del" data-id="${r.id}">✕</button>
+        </div>
+      </div>
+      ${symptomsHtml}
+      <div class="record-meta">
+        ${hasNote ? '<span>📝 有备注</span>' : ''}
+        <span>📅 ${dur}天</span>
+        ${r.endDate ? `<span>🔄 ${r.startDate} → ${r.endDate}</span>` : ''}
+      </div>
+    </li>`;
+  }).join('');
+
+  // Click to edit
+  listEl.querySelectorAll('.record-item').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('record-del')) return;
+      const id = el.dataset.id;
+      const record = getRecords().find(r => r.id === id);
+      if (record) openModal(record);
+    });
+  });
+  // Delete button
+  listEl.querySelectorAll('.record-del').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      deleteRecord(el.dataset.id);
+    });
+  });
 }
 
-// Export
-document.getElementById('btn-export').addEventListener('click', () => {
-  const records = getRecords();
-  if (records.length === 0) { showToast('没有数据可导出'); return; }
-  const text = '感冒记录\n' + records.sort().map(r => r + ' ' + weekday(r)).join('\n');
-  navigator.clipboard.writeText(text).then(
-    () => showToast('已复制到剪贴板'),
-    () => { // fallback
-      const ta = document.createElement('textarea');
-      ta.value = text; document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); ta.remove();
-      showToast('已复制到剪贴板');
-    }
-  );
-});
-
-// Event listeners
-document.getElementById('btn-record').addEventListener('click', recordSickness);
-document.getElementById('btn-clear').addEventListener('click', clearAll);
-
+// ========== Init ==========
 render();
+
+// Service Worker registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// Handle resize for chart
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(render, 200);
+});
 </script>
 </body>
 </html>
